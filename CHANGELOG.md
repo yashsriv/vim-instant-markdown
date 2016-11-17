@@ -42,3 +42,6 @@ All changes for this release were made in the backend. Do `[sudo] npm -g update 
 - Plugin should be _much_ more performant and stable. Should be able to edit at brisk typing speed without slowdowns or crashes.
 - Updated to the latest github styles!
   - Due to github not fully open-sourcing their current syntax highlighting pipeline, syntax highlighting colors are _slightly_ different.
+
+### 0.0.1 (11-18-2016)
+Fresh Changes over previous for `instant-pandoc-d` instead of `instant-markdown-d`

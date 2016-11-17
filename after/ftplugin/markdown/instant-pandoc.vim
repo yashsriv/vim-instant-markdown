@@ -1,22 +1,26 @@
 " # Configuration
-if !exists('g:instant_markdown_slow')
-    let g:instant_markdown_slow = 0
+if !exists('g:instant_pandoc_slow')
+    let g:instant_pandoc_slow = 0
 endif
 
-if !exists('g:instant_markdown_autostart')
-    let g:instant_markdown_autostart = 1
+if !exists('g:instant_pandoc_autostart')
+    let g:instant_pandoc_autostart = 1
 endif
 
-if !exists('g:instant_markdown_open_to_the_world')
-    let g:instant_markdown_open_to_the_world = 0
+if !exists('g:instant_pandoc_open_to_the_world')
+    let g:instant_pandoc_open_to_the_world = 0
 endif
 
-if !exists('g:instant_markdown_allow_unsafe_content')
-    let g:instant_markdown_allow_unsafe_content = 0
+if !exists('g:instant_pandoc_allow_unsafe_content')
+    let g:instant_pandoc_allow_unsafe_content = 0
 endif
 
-if !exists('g:instant_markdown_allow_external_content')
-    let g:instant_markdown_allow_external_content = 1
+if !exists('g:instant_pandoc_allow_external_content')
+    let g:instant_pandoc_allow_external_content = 1
+endif
+
+if !exists('g:instant_pandoc_port')
+    let g:instant_pandoc_port = 8090
 endif
 
 " # Utility Functions
@@ -67,17 +71,17 @@ endfu
 
 function! s:startDaemon(initialMDLines)
     let env = ''
-    if g:instant_markdown_open_to_the_world
-        let env .= 'INSTANT_MARKDOWN_OPEN_TO_THE_WORLD=1 '
+    if g:instant_pandoc_open_to_the_world
+        let env .= 'INSTANT_PANDOC_OPEN_TO_THE_WORLD=1 '
     endif
-    if g:instant_markdown_allow_unsafe_content
-        let env .= 'INSTANT_MARKDOWN_ALLOW_UNSAFE_CONTENT=1 '
+    if g:instant_pandoc_allow_unsafe_content
+        let env .= 'INSTANT_PANDOC_ALLOW_UNSAFE_CONTENT=1 '
     endif
-    if !g:instant_markdown_allow_external_content
-        let env .= 'INSTANT_MARKDOWN_BLOCK_EXTERNAL=1 '
+    if !g:instant_pandoc_allow_external_content
+        let env .= 'INSTANT_PANDOC_BLOCK_EXTERNAL=1 '
     endif
 
-    call s:systemasync('instant-markdown-d', a:initialMDLines)
+    call s:systemasync('instant-pandoc-d -p ' . g:instant_pandoc_port, a:initialMDLines)
 endfu
 
 function! s:initDict()
@@ -111,12 +115,12 @@ endfu
 
 " # Functions called by autocmds
 "
-" ## push a new Markdown buffer into the system.
+" ## push a new Pandoc buffer into the system.
 "
 " 1. Track it so we know when to garbage collect the daemon
 " 2. Start daemon if we're on the first MD buffer.
 " 3. Initialize changedtickLast, possibly needlessly(?)
-fu! s:pushMarkdown()
+fu! s:pushPandoc()
     let bufnr = s:myBufNr()
     call s:initDict()
     if len(s:buffers) == 0
@@ -126,15 +130,15 @@ fu! s:pushMarkdown()
     let b:changedtickLast = b:changedtick
 endfu
 
-" ## pop a Markdown buffer
+" ## pop a Pandoc buffer
 "
 " 1. Pop the buffer reference
 " 2. Garbage collection
 "     * daemon
 "     * autocmds
-fu! s:popMarkdown()
+fu! s:popPandoc()
     let bufnr = s:myBufNr()
-    silent au! instant-markdown * <buffer=abuf>
+    silent au! instant-pandoc * <buffer=abuf>
     call s:popBuffer(bufnr)
     if len(s:buffers) == 0
         call s:killDaemon()
@@ -153,10 +157,10 @@ fu! s:temperedRefresh()
     endif
 endfu
 
-fu! s:previewMarkdown()
+fu! s:previewPandoc()
   call s:startDaemon(getline(1, '$'))
-  aug instant-markdown
-    if g:instant_markdown_slow
+  aug instant-pandoc
+    if g:instant_pandoc_slow
       au CursorHold,BufWrite,InsertLeave <buffer> call s:temperedRefresh()
     else
       au CursorHold,CursorHoldI,CursorMoved,CursorMovedI <buffer> call s:temperedRefresh()
@@ -167,22 +171,22 @@ endfu
 
 fu! s:cleanUp()
   call s:killDaemon()
-  au! instant-markdown * <buffer>
+  au! instant-pandoc * <buffer>
 endfu
 
-if g:instant_markdown_autostart
+if g:instant_pandoc_autostart
     " # Define the autocmds "
-    aug instant-markdown
+    aug instant-pandoc
         au! * <buffer>
         au BufEnter <buffer> call s:refreshView()
-        if g:instant_markdown_slow
+        if g:instant_pandoc_slow
           au CursorHold,BufWrite,InsertLeave <buffer> call s:temperedRefresh()
         else
           au CursorHold,CursorHoldI,CursorMoved,CursorMovedI <buffer> call s:temperedRefresh()
         endif
-        au BufWinLeave <buffer> call s:popMarkdown()
-        au BufwinEnter <buffer> call s:pushMarkdown()
+        au BufWinLeave <buffer> call s:popPandoc()
+        au BufwinEnter <buffer> call s:pushPandoc()
     aug END
 else
-    command! -buffer InstantMarkdownPreview call s:previewMarkdown()
+    command! -buffer InstantPandocPreview call s:previewPandoc()
 endif
